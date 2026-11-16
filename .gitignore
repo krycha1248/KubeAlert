@@ -1,0 +1,5 @@
+*.env
+*.env.secrets
+variables.sh
+.terragrunt-cache
+.terraform.lock.hcl
