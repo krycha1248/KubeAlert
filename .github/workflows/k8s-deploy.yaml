@@ -1,0 +1,78 @@
+name: Terragrunt Deployment
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Terragrunt action to run'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
+          - init
+
+jobs:
+  terragrunt:
+    name: Terragrunt Run
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Load, mask and export ENV_SECRETS
+        env:
+          ENV_SECRETS: ${{ secrets.ENV_SECRETS }}
+        run: |
+          while IFS= read -r line || [ -n "$line" ]; do
+            [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+
+            if [[ "$line" != *"="* ]]; then
+              continue
+            fi
+
+            key="${line%%=*}"
+            value="${line#*=}"
+
+            key="$(echo -n "$key" | xargs)"
+
+            if [ -n "$value" ]; then
+              echo "::add-mask::$value"
+            fi
+
+            delimiter="EOF_$(openssl rand -hex 8)"
+            echo "$key<<$delimiter" >> "$GITHUB_ENV"
+            echo "$value" >> "$GITHUB_ENV"
+            echo "$delimiter" >> "$GITHUB_ENV"
+          done <<< "$ENV_SECRETS"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e
+        with:
+          terraform_version: 1.17.2
+          terraform_wrapper: false
+
+      - name: Setup Terragrunt
+        uses: gruntwork-io/action-terragrunt@8c1d96b76d445fd2e41475a3f0b63dcd1d9cc077
+        with:
+          tg_version: 1.1.0
+          tofu_version: 1.12.0
+
+      - name: Terragrunt Init
+        run: make init
+
+      - name: Terragrunt Plan
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.action == 'plan')
+        run: make plan
+
+      - name: Terragrunt Apply
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.action == 'apply')
+        run: make apply
