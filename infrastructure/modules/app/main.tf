@@ -206,39 +206,38 @@ resource "kubernetes_service_v1" "this" {
 }
 
 # Optional Ingress resource (Traefik-compatible)
-# resource "kubernetes_ingress_v1" "this" {
-#   count = var.ingress_enabled && var.domain_name != "" ? 1 : 0
+resource "kubernetes_ingress_v1" "this" {
 
-#   metadata {
-#     name      = var.app_name
-#     namespace = var.namespace
-#     labels    = local.common_labels
-#     annotations = {
-#       "traefik.ingress.kubernetes.io/router.entrypoints" = "websecure"
-#     }
-#   }
+  metadata {
+    name      = var.app_name
+    namespace = var.namespace
+    labels    = local.common_labels
+    annotations = {
+      "traefik.ingress.kubernetes.io/router.entrypoints" = "websecure"
+    }
+  }
 
-#   spec {
-#     ingress_class_name = var.ingress_class_name
+  spec {
+    ingress_class_name = var.ingress_class_name
 
-#     rule {
-#       host = var.domain_name
+    rule {
+      host = var.domain_name
 
-#       http {
-#         path {
-#           path      = "/"
-#           path_type = "Prefix"
+      http {
+        path {
+          path      = "/"
+          path_type = "Prefix"
 
-#           backend {
-#             service {
-#               name = kubernetes_service_v1.this.metadata[0].name
-#               port {
-#                 number = var.service_port
-#               }
-#             }
-#           }
-#         }
-#       }
-#     }
-#   }
-# }
+          backend {
+            service {
+              name = kubernetes_service_v1.this.metadata[0].name
+              port {
+                number = var.service_port
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
