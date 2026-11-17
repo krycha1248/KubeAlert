@@ -48,6 +48,12 @@ resource "kubernetes_cluster_role_v1" "this" {
     resources  = ["pods", "services", "namespaces", "nodes", "events"]
     verbs      = ["get", "list", "watch"]
   }
+
+  rule {
+    api_groups = [""]
+    resources  = ["pods/log"]
+    verbs      = ["get"]
+  }
 }
 
 # Bind the ClusterRole to the application's ServiceAccount
@@ -122,6 +128,66 @@ resource "kubernetes_deployment_v1" "this" {
           env {
             name  = "APP_VERSION"
             value = var.image_tag
+          }
+
+          env {
+            name  = "SMTP_HOST"
+            value = var.smtp_host
+          }
+
+          env {
+            name  = "SMTP_PORT"
+            value = tostring(var.smtp_port)
+          }
+
+          env {
+            name  = "SMTP_USER"
+            value = var.smtp_user
+          }
+
+          env {
+            name  = "SMTP_PASSWORD"
+            value = var.smtp_password
+          }
+
+          env {
+            name  = "SMTP_USE_TLS"
+            value = tostring(var.smtp_use_tls)
+          }
+
+          env {
+            name  = "SMTP_USE_SSL"
+            value = tostring(var.smtp_use_ssl)
+          }
+
+          env {
+            name  = "ALERT_FROM_EMAIL"
+            value = var.alert_from_email
+          }
+
+          env {
+            name  = "ALERT_TO_EMAIL"
+            value = var.alert_to_email
+          }
+
+          env {
+            name  = "MONITORED_NAMESPACES"
+            value = var.monitored_namespaces
+          }
+
+          env {
+            name  = "IGNORED_NAMESPACES"
+            value = var.ignored_namespaces
+          }
+
+          env {
+            name  = "ALERT_COOLDOWN_SECONDS"
+            value = tostring(var.alert_cooldown_seconds)
+          }
+
+          env {
+            name  = "INCLUDE_LOGS"
+            value = tostring(var.include_logs)
           }
 
           dynamic "env" {

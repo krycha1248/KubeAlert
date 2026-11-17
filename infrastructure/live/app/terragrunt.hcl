@@ -41,6 +41,20 @@ inputs = {
   app_name           = "kubealert"
   image_name         = "ghcr.io/krycha1248/kubealert"
   image_tag          = local.deployment.locals.app_image_tag
+  ingress_enabled    = true
   ingress_class_name = "traefik"
   domain_name        = local.deployment.locals.domain_name
+
+  smtp_host              = local.deployment.locals.smtp_host
+  smtp_port              = local.deployment.locals.smtp_port
+  smtp_user              = local.deployment.locals.smtp_user
+  smtp_password          = local.deployment.locals.smtp_password
+  smtp_use_tls           = local.deployment.locals.smtp_use_tls
+  smtp_use_ssl           = local.deployment.locals.smtp_use_ssl
+  alert_from_email       = local.deployment.locals.alert_from_email
+  alert_to_email         = local.deployment.locals.alert_to_email
+  monitored_namespaces   = local.deployment.locals.monitored_namespaces
+  ignored_namespaces     = local.deployment.locals.ignored_namespaces
+  alert_cooldown_seconds = local.deployment.locals.alert_cooldown_seconds
+  include_logs           = local.deployment.locals.include_logs
 }

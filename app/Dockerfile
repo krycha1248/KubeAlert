@@ -13,7 +13,7 @@ RUN addgroup -g 10001 -S appgroup && \
 WORKDIR /app
 
 # Copy application source code
-COPY --chown=appuser:appgroup main.py .
+COPY --chown=appuser:appgroup . .
 
 # Switch to unprivileged user
 USER 10001:10001

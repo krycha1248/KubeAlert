@@ -125,3 +125,75 @@ variable "extra_labels" {
   type        = map(string)
   default     = {}
 }
+
+#
+# SMTP & Alerting Configuration
+#
+
+variable "smtp_host" {
+  description = "SMTP server hostname"
+  type        = string
+}
+
+variable "smtp_port" {
+  description = "SMTP server port"
+  type        = number
+  default     = 587
+}
+
+variable "smtp_user" {
+  description = "SMTP username / login"
+  type        = string
+}
+
+variable "smtp_password" {
+  description = "SMTP password / application token"
+  type        = string
+  sensitive   = true
+}
+
+variable "smtp_use_tls" {
+  description = "Whether to use STARTTLS for SMTP"
+  type        = bool
+  default     = true
+}
+
+variable "smtp_use_ssl" {
+  description = "Whether to use SSL directly for SMTP (port 465)"
+  type        = bool
+  default     = false
+}
+
+variable "alert_from_email" {
+  description = "Sender email address for alerts"
+  type        = string
+}
+
+variable "alert_to_email" {
+  description = "Recipient email address for administrator alerts"
+  type        = string
+}
+
+variable "monitored_namespaces" {
+  description = "Comma-separated list of namespaces to monitor (empty means all namespaces)"
+  type        = string
+  default     = ""
+}
+
+variable "ignored_namespaces" {
+  description = "Comma-separated list of namespaces to ignore"
+  type        = string
+  default     = "kube-system,local-path-storage"
+}
+
+variable "alert_cooldown_seconds" {
+  description = "Cooldown period in seconds to suppress duplicate alerts for the same issue"
+  type        = number
+  default     = 900
+}
+
+variable "include_logs" {
+  description = "Whether to fetch and attach recent container logs in email alerts"
+  type        = bool
+  default     = true
+}
