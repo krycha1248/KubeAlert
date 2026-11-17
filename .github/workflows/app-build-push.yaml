@@ -44,6 +44,10 @@ jobs:
     name: Semantic Release & Publish Image
     needs: verify-image-build
     runs-on: ubuntu-latest
+    outputs:
+      new_release_published: ${{ steps.semantic.outputs.new_release_published }}
+      release_tag: ${{ steps.release_info.outputs.tag }}
+      image_name: ${{ steps.release_info.outputs.image }}
 
     steps:
       - name: Checkout repository (full history for semantic-release)
@@ -69,11 +73,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set lowercase repository name
+      - name: Set lowercase repository name and release outputs
+        id: release_info
         if: steps.semantic.outputs.new_release_published == 'true'
         run: |
           REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          TAG="v${{ steps.semantic.outputs.new_release_version }}"
           echo "REPO_LOWER=${REPO_LOWER}" >> "$GITHUB_ENV"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${REPO_LOWER}:${TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push Docker image with semantic release tag
         if: steps.semantic.outputs.new_release_published == 'true'
@@ -85,3 +93,13 @@ jobs:
           tags: ghcr.io/${{ env.REPO_LOWER }}:v${{ steps.semantic.outputs.new_release_version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to Kubernetes via Terragrunt
+    needs: semantic-release-and-publish
+    if: needs.semantic-release-and-publish.outputs.new_release_published == 'true'
+    uses: ./.github/workflows/k8s-deploy.yaml
+    with:
+      action: apply
+      image_tag: ${{ needs.semantic-release-and-publish.outputs.release_tag }}
+    secrets: inherit
