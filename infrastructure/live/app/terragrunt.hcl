@@ -15,7 +15,7 @@ dependency "cluster" {
     kubernetes_client_certificate     = "bW9ja19jbGllbnRfY2VydAo="
     kubernetes_client_key             = "bW9ja19jbGllbnRfa2V5Cg=="
   }
-  mock_outputs_allowed_terraform_commands = ["validate", "plan"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
 }
 
 terraform {
@@ -28,7 +28,6 @@ inputs = {
   kube_client_certificate     = dependency.cluster.outputs.kubernetes_client_certificate
   kube_client_key             = dependency.cluster.outputs.kubernetes_client_key
 
-  create_namespace = true
   namespace        = local.deployment.locals.namespace
   app_name         = "kubealert"
   image_name       = "ghcr.io/krycha1248/kubealert"
