@@ -10,6 +10,9 @@ concurrency:
   group: app-pr-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   docker-build-test:
     name: Test Docker Image Build

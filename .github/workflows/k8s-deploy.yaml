@@ -43,6 +43,9 @@ concurrency:
   group: terraform-state-lock
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   terragrunt:
     name: Terragrunt Run
