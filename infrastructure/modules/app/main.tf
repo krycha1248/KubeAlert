@@ -213,7 +213,7 @@ resource "kubernetes_ingress_v1" "this" {
     namespace = var.namespace
     labels    = local.common_labels
     annotations = {
-      "traefik.ingress.kubernetes.io/router.entrypoints" = "websecure"
+      "traefik.ingress.kubernetes.io/router.entrypoints" = "web,websecure"
     }
   }
 
