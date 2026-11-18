@@ -32,7 +32,7 @@ terraform {
 }
 
 exclude {
-  if = !dependency.cluster.outputs.kubernetes_host
+  if = dependency.cluster.outputs.kubernetes_host == "" || dependency.cluster.outputs.cluster_ca_certificate == "" || dependency.cluster.outputs.kubernetes_client_certificate == "" || dependency.cluster.outputs.kubernetes_client_key == ""
   actions = ["plan"]
 }
 
