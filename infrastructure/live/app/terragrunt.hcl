@@ -32,7 +32,9 @@ terraform {
 }
 
 exclude {
-  if = dependency.cluster.outputs.kubernetes_host == "" || dependency.cluster.outputs.cluster_ca_certificate == "" || dependency.cluster.outputs.kubernetes_client_certificate == "" || dependency.cluster.outputs.kubernetes_client_key == ""
+  if = [
+    dependency.cluster.outputs.kubernetes_host == "https://127.0.0.1:6443"
+  ]
   actions = ["plan"]
 }
 
