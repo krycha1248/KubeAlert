@@ -31,6 +31,11 @@ terraform {
   source = "../../modules//app"
 }
 
+exclude {
+  if = !dependency.cluster.outputs.kubernetes_host
+  actions = ["plan"]
+}
+
 inputs = {
   kube_host                   = dependency.cluster.outputs.kubernetes_host
   kube_cluster_ca_certificate = dependency.cluster.outputs.kubernetes_cluster_ca_certificate
