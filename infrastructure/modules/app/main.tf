@@ -273,13 +273,15 @@ resource "kubernetes_service_v1" "this" {
 
 # Optional Ingress resource (Traefik-compatible)
 resource "kubernetes_ingress_v1" "this" {
+  count = var.ingress_enabled ? 1 : 0
 
   metadata {
     name      = var.app_name
     namespace = var.namespace
     labels    = local.common_labels
     annotations = {
-      "traefik.ingress.kubernetes.io/router.entrypoints" = "web,websecure"
+      "traefik.ingress.kubernetes.io/router.entrypoints" = "web,websecure",
+      "traefik.ingress.kubernetes.io/router.middlewares" = module.oauth_proxy.traefik_middleware_annotation
     }
   }
 
@@ -306,4 +308,22 @@ resource "kubernetes_ingress_v1" "this" {
       }
     }
   }
+}
+
+module "oauth_proxy" {
+  source = "git::https://github.com/krycha1248/terraform-modules.git//oauth-proxy"
+
+  namespace                 = var.namespace
+  create_namespace          = false
+  app_name                  = "${var.app_name}-oauth-proxy"
+  domain_name               = var.domain_name
+  provider_type             = "github"
+  client_id                 = var.oauth_client_id
+  client_secret             = var.oauth_client_secret
+  github_users              = var.oauth_github_users
+  create_traefik_middleware = true
+  ingress_enabled           = true
+  ingress_class_name        = var.ingress_class_name
+  portal_title              = var.oauth_portal_title
+  extra_labels              = var.extra_labels
 }

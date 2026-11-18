@@ -22,4 +22,7 @@ locals {
   ignored_namespaces     = get_env("TF_VAR_ignored_namespaces", "kube-system,local-path-storage")
   alert_cooldown_seconds = tonumber(get_env("TF_VAR_alert_cooldown_seconds", "900"))
   include_logs           = get_env("TF_VAR_include_logs", "true")
+
+  oauth_client_id     = get_env("TF_VAR_oauth_client_id", "")
+  oauth_client_secret = get_env("TF_VAR_oauth_client_secret", "")
 }

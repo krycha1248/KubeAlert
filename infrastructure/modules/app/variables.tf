@@ -197,3 +197,33 @@ variable "include_logs" {
   type        = bool
   default     = true
 }
+
+variable "oauth_provider_type" {
+  description = "OAuth / OIDC provider type (github, keycloak-oidc, oidc, google, etc.)"
+  type        = string
+  default     = "github"
+}
+
+variable "oauth_client_id" {
+  description = "OAuth2 / OIDC Client ID"
+  type        = string
+}
+
+variable "oauth_client_secret" {
+  description = "OAuth2 / OIDC Client Secret"
+  type        = string
+  sensitive   = true
+}
+
+variable "oauth_github_users" {
+  description = "List of allowed GitHub usernames (e.g. ['krycha1248'])"
+  type        = list(string)
+  default     = ["krycha1248"]
+}
+
+variable "oauth_portal_title" {
+  description = "Display title on the OAuth login and error pages"
+  type        = string
+  default     = "KubeAlert"
+}
+
