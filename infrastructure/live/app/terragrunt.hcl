@@ -28,7 +28,13 @@ dependency "bootstrap" {
 }
 
 terraform {
-  source = "../../modules/app"
+  source = "../../modules//app"
+}
+
+exclude {
+  if      = dependency.cluster.outputs.kubernetes_host == "https://127.0.0.1:6443"
+  no_run  = true
+  actions = ["plan"]
 }
 
 inputs = {
@@ -57,4 +63,7 @@ inputs = {
   ignored_namespaces     = local.deployment.locals.ignored_namespaces
   alert_cooldown_seconds = local.deployment.locals.alert_cooldown_seconds
   include_logs           = local.deployment.locals.include_logs
+
+  oauth_client_id     = local.deployment.locals.oauth_client_id
+  oauth_client_secret = local.deployment.locals.oauth_client_secret
 }
