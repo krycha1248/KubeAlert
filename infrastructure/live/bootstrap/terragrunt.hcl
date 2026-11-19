@@ -28,5 +28,7 @@ inputs = {
   kube_client_certificate     = dependency.cluster.outputs.kubernetes_client_certificate
   kube_client_key             = dependency.cluster.outputs.kubernetes_client_key
 
+  proxy_protocol_trusted_ips = dependency.cluster.outputs.network_cidr
+
   deploy_traefik = local.deployment.locals.deploy_traefik
 }
