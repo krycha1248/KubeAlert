@@ -29,6 +29,9 @@ inputs = {
   kube_client_key             = dependency.cluster.outputs.kubernetes_client_key
 
   proxy_protocol_trusted_ips = dependency.cluster.outputs.network_cidr
+  loadbalancer_annotations = {
+    "loadbalancer.openstack.org/proxy-protocol" = "v2"
+  }
 
   deploy_traefik = local.deployment.locals.deploy_traefik
 }
