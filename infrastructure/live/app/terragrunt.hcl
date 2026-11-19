@@ -32,9 +32,8 @@ terraform {
 }
 
 exclude {
-  if = (
-    dependency.cluster.outputs.kubernetes_host == "https://127.0.0.1:6443"
-  )
+  if      = dependency.cluster.outputs.kubernetes_host == "https://127.0.0.1:6443"
+  no_run  = true
   actions = ["plan"]
 }
 
