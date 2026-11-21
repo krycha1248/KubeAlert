@@ -23,7 +23,7 @@ resource "kubernetes_namespace_v1" "this" {
 resource "kubernetes_service_account_v1" "this" {
   metadata {
     name      = "${var.app_name}-sa"
-    namespace = kubernetes.namespace_v1.this.metadata[0].name
+    namespace = kubernetes_namespace_v1.this.metadata[0].name
     labels    = local.common_labels
   }
 
@@ -33,7 +33,7 @@ resource "kubernetes_service_account_v1" "this" {
 # ClusterRole allowing KubeAlert to query KubeAPI endpoints
 resource "kubernetes_cluster_role_v1" "this" {
   metadata {
-    name   = "${var.app_name}-${kubernetes.namespace_v1.this.metadata[0].name}-reader"
+    name   = "${var.app_name}-${kubernetes_namespace_v1.this.metadata[0].name}-reader"
     labels = local.common_labels
   }
 
@@ -59,7 +59,7 @@ resource "kubernetes_cluster_role_v1" "this" {
 # Bind the ClusterRole to the application's ServiceAccount
 resource "kubernetes_cluster_role_binding_v1" "this" {
   metadata {
-    name   = "${var.app_name}-${kubernetes.namespace_v1.this.metadata[0].name}-binding"
+    name   = "${var.app_name}-${kubernetes_namespace_v1.this.metadata[0].name}-binding"
     labels = local.common_labels
   }
 
@@ -72,7 +72,7 @@ resource "kubernetes_cluster_role_binding_v1" "this" {
   subject {
     kind      = "ServiceAccount"
     name      = kubernetes_service_account_v1.this.metadata[0].name
-    namespace = kubernetes.namespace_v1.this.metadata[0].name
+    namespace = kubernetes_namespace_v1.this.metadata[0].name
   }
 }
 
@@ -80,7 +80,7 @@ resource "kubernetes_cluster_role_binding_v1" "this" {
 resource "kubernetes_deployment_v1" "this" {
   metadata {
     name      = var.app_name
-    namespace = kubernetes.namespace_v1.this.metadata[0].name
+    namespace = kubernetes_namespace_v1.this.metadata[0].name
     labels    = local.common_labels
   }
 
@@ -251,7 +251,7 @@ resource "kubernetes_deployment_v1" "this" {
 resource "kubernetes_service_v1" "this" {
   metadata {
     name      = var.app_name
-    namespace = kubernetes.namespace_v1.this.metadata[0].name
+    namespace = kubernetes_namespace_v1.this.metadata[0].name
     labels    = local.common_labels
   }
 
@@ -277,7 +277,7 @@ resource "kubernetes_ingress_v1" "this" {
 
   metadata {
     name      = var.app_name
-    namespace = kubernetes.namespace_v1.this.metadata[0].name
+    namespace = kubernetes_namespace_v1.this.metadata[0].name
     labels    = local.common_labels
     annotations = {
       "traefik.ingress.kubernetes.io/router.entrypoints" = "web,websecure",
@@ -313,7 +313,7 @@ resource "kubernetes_ingress_v1" "this" {
 module "oauth_proxy" {
   source = "git::https://github.com/krycha1248/terraform-modules.git//oauth-proxy"
 
-  namespace                 = kubernetes.namespace_v1.this.metadata[0].name
+  namespace                 = kubernetes_namespace_v1.this.metadata[0].name
   create_namespace          = false
   app_name                  = "${var.app_name}-oauth-proxy"
   domain_name               = var.domain_name
