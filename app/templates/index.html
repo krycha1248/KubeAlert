@@ -633,7 +633,7 @@
         <div>
           <div class="brand-title">
             KubeAlert
-            <span id="brandVersionBadge" class="brand-badge">{{ APP_VERSION }}</span>
+            <span id="brandVersionBadge" class="brand-badge">{{ APP_VERSION_TAG }}</span>
           </div>
         </div>
       </a>
@@ -836,10 +836,12 @@
 
       // 0. Update version info
       if (currentData.version) {
+        const rawVer = String(currentData.version);
+        const formattedVer = (rawVer.startsWith('v') || rawVer.startsWith('V')) ? rawVer : `v${rawVer}`;
         const appVerEl = document.getElementById('appVersion');
-        if (appVerEl) appVerEl.textContent = currentData.version;
+        if (appVerEl) appVerEl.textContent = rawVer;
         const brandBadge = document.getElementById('brandVersionBadge');
-        if (brandBadge) brandBadge.textContent = `v${currentData.version}`;
+        if (brandBadge) brandBadge.textContent = formattedVer;
       }
 
       const k8sFooter = document.getElementById('k8sVersionFooter');
