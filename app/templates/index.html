@@ -633,7 +633,7 @@
         <div>
           <div class="brand-title">
             KubeAlert
-            <span class="brand-badge">Containers</span>
+            <span id="brandVersionBadge" class="brand-badge">v{{ APP_VERSION }}</span>
           </div>
         </div>
       </a>
@@ -781,7 +781,8 @@
   </div>
 
   <footer>
-    KubeAlert &bull; Monitoring Podów & Kontenerów Kubernetes &bull; Wersja API: <span id="appVersion">1.0.0</span>
+    KubeAlert &bull; Monitoring Podów & Kontenerów Kubernetes &bull; Wersja API: <span id="appVersion">{{ APP_VERSION }}</span>
+    <span id="k8sVersionFooter"></span>
   </footer>
 
   <script>
@@ -832,6 +833,23 @@
       const cluster = currentData.cluster || {};
       const summary = currentData.summary || {};
       const containers = currentData.containers || [];
+
+      // 0. Update version info
+      if (currentData.version) {
+        const appVerEl = document.getElementById('appVersion');
+        if (appVerEl) appVerEl.textContent = currentData.version;
+        const brandBadge = document.getElementById('brandVersionBadge');
+        if (brandBadge) brandBadge.textContent = `v${currentData.version}`;
+      }
+
+      const k8sFooter = document.getElementById('k8sVersionFooter');
+      if (k8sFooter) {
+        if (cluster.connected && cluster.version) {
+          k8sFooter.textContent = ` • Kubernetes: ${cluster.version}`;
+        } else {
+          k8sFooter.textContent = '';
+        }
+      }
 
       // 1. Cluster state
       updateClusterPill(cluster.connected, cluster.version, cluster.message);
