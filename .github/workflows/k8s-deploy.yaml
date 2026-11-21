@@ -104,6 +104,25 @@ jobs:
           echo "TF_VAR_image_tag=$IMAGE_TAG" >> "$GITHUB_ENV"
           echo "APP_IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_ENV"
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435
+
+      - name: Set lowercase repository name
+        run: |
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "REPO_LOWER=${REPO_LOWER}" >> "$GITHUB_ENV"
+
+      - name: Check if image exists in GitHub Container Registry
+        run: |
+          IMAGE_NAME="ghcr.io/${{ env.REPO_LOWER }}:${{ env.APP_IMAGE_TAG }}"
+          echo "Checking if image exists: $IMAGE_NAME"
+          if docker manifest inspect "$IMAGE_NAME" > /dev/null 2>&1; then
+            echo "Image exists."
+          else
+            echo "Image does not exist."
+            return 1
+          fi
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e
         with:
