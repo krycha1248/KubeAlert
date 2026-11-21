@@ -8,11 +8,13 @@ and sends automated email notifications to administrators via SMTP.
 
 import json
 import logging
+import os
 import signal
 import socket
 import sys
 import threading
 import time
+import urllib.parse
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Dict, Any
 
@@ -20,6 +22,7 @@ from config import Config
 from k8s_client import K8sClient
 from analyzer import PodAnalyzer
 from notifier import EmailNotifier
+from store import ContainerStore
 
 logging.basicConfig(
     level=logging.INFO,
@@ -30,6 +33,7 @@ logging.basicConfig(
 logger = logging.getLogger("kubealert.main")
 
 HOSTNAME = socket.gethostname()
+TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "templates", "index.html")
 
 # Global state for health and telemetry
 app_state: Dict[str, Any] = {
@@ -44,25 +48,65 @@ app_state: Dict[str, Any] = {
     "last_seen_resource_version": None,
 }
 
+container_store = ContainerStore()
 shutdown_event = threading.Event()
 
 
+def get_index_html() -> str:
+    """Loads Web UI template with graceful fallback."""
+    if os.path.exists(TEMPLATE_PATH):
+        try:
+            with open(TEMPLATE_PATH, "r", encoding="utf-8") as f:
+                return f.read()
+        except Exception as e:
+            logger.error("Error reading template %s: %s", TEMPLATE_PATH, e)
+    return """<!DOCTYPE html>
+<html>
+<head><title>KubeAlert</title></head>
+<body style="font-family: sans-serif; padding: 40px; background: #0b0f19; color: #fff;">
+  <h2>KubeAlert</h2>
+  <p>Web UI template file is missing. Visit <a href="/api" style="color: #6366f1;">/api</a> for JSON output.</p>
+</body>
+</html>"""
+
+
 class AppHandler(BaseHTTPRequestHandler):
-    """HTTP server handler for health probes and operational endpoints."""
+    """HTTP server handler for Web UI, API, health probes, and operational endpoints."""
 
     def log_message(self, format_str, *args):
         logger.debug("%s - %s", self.client_address[0], format_str % args)
 
     def _send_json(self, status_code: int, data: dict):
-        response_bytes = json.dumps(data, indent=2).encode("utf-8")
+        response_bytes = json.dumps(data, indent=2, ensure_ascii=False).encode("utf-8")
         self.send_response(status_code)
-        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Content-Length", str(len(response_bytes)))
+        self.end_headers()
+        self.wfile.write(response_bytes)
+
+    def _send_html(self, status_code: int, html_content: str):
+        response_bytes = html_content.encode("utf-8")
+        self.send_response(status_code)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(response_bytes)))
         self.end_headers()
         self.wfile.write(response_bytes)
 
     def do_GET(self):
-        if self.path in ("/", "/info"):
+        parsed = urllib.parse.urlparse(self.path)
+        path = parsed.path
+
+        if path in ("/", "/ui", "/index.html"):
+            self._send_html(200, get_index_html())
+        elif path in ("/api", "/api/", "/api/containers"):
+            payload = container_store.get_api_payload(
+                cluster_connected=app_state["k8s_connected"],
+                cluster_version=app_state["k8s_version"],
+                in_cluster=K8sClient().is_in_cluster(),
+            )
+            self._send_json(200, payload)
+        elif path == "/info":
             self._send_json(200, {
                 "app": "KubeAlert",
                 "version": Config.APP_VERSION,
@@ -73,13 +117,13 @@ class AppHandler(BaseHTTPRequestHandler):
                 "ignored_namespaces": list(Config.IGNORED_NAMESPACES),
                 "cooldown_seconds": Config.ALERT_COOLDOWN_SECONDS,
             })
-        elif self.path == "/healthz":
+        elif path == "/healthz":
             self._send_json(200, {"status": "healthy", "hostname": HOSTNAME})
-        elif self.path == "/ready":
+        elif path == "/ready":
             self._send_json(200, {"status": "ready", "hostname": HOSTNAME})
-        elif self.path == "/status":
+        elif path == "/status":
             self._send_json(200, app_state)
-        elif self.path == "/k8s":
+        elif path == "/k8s":
             self._send_json(200, {
                 "connected": app_state["k8s_connected"],
                 "version": app_state["k8s_version"],
@@ -97,6 +141,7 @@ def pod_watcher_loop(k8s: K8sClient, analyzer: PodAnalyzer, notifier: EmailNotif
         if not k8s.is_in_cluster():
             logger.info("Running in standalone mode (outside Kubernetes cluster). Watcher sleeping 30s...")
             app_state["watcher_running"] = False
+            container_store.clear()
             shutdown_event.wait(30)
             continue
 
@@ -112,6 +157,9 @@ def pod_watcher_loop(k8s: K8sClient, analyzer: PodAnalyzer, notifier: EmailNotif
             initial_pods, resource_version = k8s.list_pods()
             app_state["last_seen_resource_version"] = resource_version
             logger.info("Retrieved %d pods, baseline resourceVersion: %s", len(initial_pods), resource_version)
+
+            # Synchronize container store with active pods
+            container_store.sync_pods(initial_pods)
 
             # Analyze any currently failing pods on startup
             for pod in initial_pods:
@@ -135,8 +183,9 @@ def pod_watcher_loop(k8s: K8sClient, analyzer: PodAnalyzer, notifier: EmailNotif
                     app_state["last_seen_resource_version"] = rv
                     resource_version = rv
 
-                # Analyze pod issues upon ADDED or MODIFIED events
+                # Update container store based on watch event
                 if event_type in ("ADDED", "MODIFIED"):
+                    container_store.update_pod(pod)
                     issues = analyzer.analyze_pod(pod)
                     for issue in issues:
                         logs = None
@@ -144,6 +193,8 @@ def pod_watcher_loop(k8s: K8sClient, analyzer: PodAnalyzer, notifier: EmailNotif
                             logs = k8s.get_pod_logs(issue.namespace, issue.pod_name, issue.container_name, Config.MAX_LOG_LINES)
                         notifier.send_alert(issue, logs)
                         app_state["alerts_dispatched"] += 1
+                elif event_type == "DELETED":
+                    container_store.remove_pod(pod)
 
             logger.info("Watch stream closed by server. Reconnecting in 2 seconds...")
             time.sleep(2)

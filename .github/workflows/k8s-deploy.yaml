@@ -4,10 +4,6 @@ on:
   pull_request:
     branches:
       - master
-    paths:
-      - 'infrastructure/**'
-      - 'Makefile'
-      - '.github/workflows/k8s-deploy.yaml'
   workflow_dispatch:
     inputs:
       action:
