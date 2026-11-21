@@ -236,6 +236,7 @@ class ContainerStore:
                 msg = error_message or "Błąd połączenia z Kubernetes API w klastrze."
 
             return {
+                "version": Config.APP_VERSION,
                 "cluster": {
                     "connected": cluster_connected,
                     "version": cluster_version,

@@ -53,18 +53,18 @@ shutdown_event = threading.Event()
 
 
 def get_index_html() -> str:
-    """Loads Web UI template with graceful fallback."""
+    """Loads Web UI template with graceful fallback and dynamic version injection."""
     if os.path.exists(TEMPLATE_PATH):
         try:
             with open(TEMPLATE_PATH, "r", encoding="utf-8") as f:
-                return f.read()
+                return f.read().replace("{{ APP_VERSION }}", Config.APP_VERSION)
         except Exception as e:
             logger.error("Error reading template %s: %s", TEMPLATE_PATH, e)
-    return """<!DOCTYPE html>
+    return f"""<!DOCTYPE html>
 <html>
 <head><title>KubeAlert</title></head>
 <body style="font-family: sans-serif; padding: 40px; background: #0b0f19; color: #fff;">
-  <h2>KubeAlert</h2>
+  <h2>KubeAlert v{Config.APP_VERSION}</h2>
   <p>Web UI template file is missing. Visit <a href="/api" style="color: #6366f1;">/api</a> for JSON output.</p>
 </body>
 </html>"""
