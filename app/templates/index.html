@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KubeAlert - Status Kontenerów</title>
+  <style>
+    :root {
+      --bg-primary: #0b0f19;
+      --bg-secondary: #111827;
+      --bg-card: #161f30;
+      --bg-hover: #1f293d;
+      --border-color: #232f45;
+      --border-subtle: #1e293b;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --color-success: #10b981;
+      --color-success-bg: rgba(16, 185, 129, 0.12);
+      --color-warning: #f59e0b;
+      --color-warning-bg: rgba(245, 158, 11, 0.14);
+      --color-danger: #ef4444;
+      --color-danger-bg: rgba(239, 68, 68, 0.14);
+      --color-info: #38bdf8;
+      --color-info-bg: rgba(56, 189, 248, 0.12);
+      --color-brand: #6366f1;
+      --color-brand-bg: rgba(99, 102, 241, 0.15);
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.5;
+      padding: 0;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    /* Header */
+    header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      backdrop-filter: blur(8px);
+    }
+
+    .header-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, #4f46e5, #06b6d4);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+    }
+
+    .brand-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-badge {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      background: var(--color-brand-bg);
+      color: #818cf8;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 9999px;
+      font-weight: 600;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* Cluster connection badge */
+    .cluster-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      border: 1px solid transparent;
+    }
+
+    .cluster-status-pill.connected {
+      background: var(--color-success-bg);
+      color: var(--color-success);
+      border-color: rgba(16, 185, 129, 0.25);
+    }
+
+    .cluster-status-pill.disconnected {
+      background: var(--color-danger-bg);
+      color: #f87171;
+      border-color: rgba(239, 68, 68, 0.25);
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .dot.pulse {
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+      70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+
+    .btn:hover {
+      background: var(--bg-hover);
+      border-color: #334155;
+    }
+
+    .btn-api {
+      background: rgba(99, 102, 241, 0.1);
+      color: #a5b4fc;
+      border-color: rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-api:hover {
+      background: rgba(99, 102, 241, 0.2);
+    }
+
+    /* Warning Banner */
+    .banner {
+      display: none;
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(245, 158, 11, 0.08));
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      color: #fecaca;
+    }
+
+    .banner.visible {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .banner-icon {
+      color: #f87171;
+      font-size: 1.4rem;
+      line-height: 1;
+    }
+
+    .banner-content h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #fca5a5;
+      margin-bottom: 4px;
+    }
+
+    .banner-content p {
+      font-size: 0.85rem;
+      color: #cbd5e1;
+    }
+
+    /* Summary KPI Cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 18px 20px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      border-color: #3b4b66;
+    }
+
+    .stat-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--stat-accent, var(--color-brand));
+    }
+
+    .stat-card.total { --stat-accent: var(--color-brand); }
+    .stat-card.running { --stat-accent: var(--color-success); }
+    .stat-card.waiting { --stat-accent: var(--color-warning); }
+    .stat-card.unhealthy { --stat-accent: var(--color-danger); }
+    .stat-card.pods { --stat-accent: var(--color-info); }
+
+    .stat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text-secondary);
+      font-size: 0.82rem;
+      font-weight: 500;
+      margin-bottom: 10px;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      color: var(--text-primary);
+    }
+
+    .stat-card.unhealthy.has-errors .stat-value {
+      color: var(--color-danger);
+    }
+
+    /* Filters toolbar */
+    .toolbar {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .search-box {
+      position: relative;
+      flex: 1;
+      min-width: 260px;
+    }
+
+    .search-input {
+      width: 100%;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 9px 12px 9px 36px;
+      font-size: 0.85rem;
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+
+    .search-input:focus {
+      border-color: var(--color-brand);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .filter-btn:hover {
+      color: var(--text-primary);
+      border-color: #475569;
+    }
+
+    .filter-btn.active {
+      background: var(--color-brand);
+      border-color: var(--color-brand);
+      color: #ffffff;
+    }
+
+    .select-ns {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      color: var(--text-primary);
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* Table Container */
+    .table-container {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.85rem;
+    }
+
+    thead th {
+      background: rgba(15, 23, 42, 0.7);
+      padding: 12px 16px;
+      color: var(--text-secondary);
+      font-weight: 600;
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    tbody td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background-color: var(--bg-hover);
+    }
+
+    /* Status Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    .badge-running {
+      background: var(--color-success-bg);
+      color: var(--color-success);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .badge-waiting {
+      background: var(--color-warning-bg);
+      color: var(--color-warning);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+
+    .badge-danger {
+      background: var(--color-danger-bg);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .badge-terminated {
+      background: rgba(100, 116, 139, 0.15);
+      color: #94a3b8;
+      border: 1px solid rgba(100, 116, 139, 0.3);
+    }
+
+    .ns-tag {
+      display: inline-block;
+      padding: 2px 7px;
+      background: rgba(56, 189, 248, 0.1);
+      color: #7dd3fc;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-family: monospace;
+      margin-left: 6px;
+    }
+
+    .code-text {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.8rem;
+      color: #cbd5e1;
+    }
+
+    .img-subtext {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      max-width: 280px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .restart-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 0.78rem;
+    }
+
+    .restart-badge.zero {
+      color: var(--text-muted);
+    }
+
+    .restart-badge.has-restarts {
+      background: var(--color-warning-bg);
+      color: var(--color-warning);
+    }
+
+    .restart-badge.high-restarts {
+      background: var(--color-danger-bg);
+      color: #f87171;
+    }
+
+    /* Empty state */
+    .empty-state {
+      padding: 64px 24px;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+
+    .empty-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      opacity: 0.7;
+    }
+
+    .empty-state h3 {
+      font-size: 1.15rem;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .empty-state p {
+      font-size: 0.88rem;
+      max-width: 520px;
+      margin: 0 auto;
+      color: var(--text-muted);
+    }
+
+    /* Modal for details */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      z-index: 50;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      max-width: 650px;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 24px;
+      position: relative;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-title {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.4rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .modal-close:hover {
+      color: var(--text-primary);
+    }
+
+    .details-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 12px;
+    }
+
+    .details-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .details-val {
+      font-size: 0.88rem;
+      color: var(--text-primary);
+      word-break: break-all;
+    }
+
+    .error-box {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: #fca5a5;
+      white-space: pre-wrap;
+    }
+
+    footer {
+      text-align: center;
+      padding: 32px 24px;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-content">
+      <a href="/" class="brand">
+        <div class="brand-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+            <path d="M2 17l10 5 10-5"></path>
+            <path d="M2 12l10 5 10-5"></path>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">
+            KubeAlert
+            <span class="brand-badge">Containers</span>
+          </div>
+        </div>
+      </a>
+
+      <div class="header-actions">
+        <div id="clusterPill" class="cluster-status-pill disconnected">
+          <span class="dot"></span>
+          <span id="clusterStatusText">Sprawdzanie połączenia...</span>
+        </div>
+
+        <a href="/api" target="_blank" class="btn btn-api" title="Pokaż surowy JSON z endpointu /api">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17l6-6-6-6"></path><path d="M12 19h8"></path></svg>
+          /api JSON
+        </a>
+
+        <button id="refreshBtn" class="btn" title="Odśwież dane">
+          <svg id="refreshIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          Odśwież
+        </button>
+
+        <button id="autoToggleBtn" class="btn" title="Przełącz automatyczne odświeżanie">
+          Auto: 5s
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- Cluster Warning Banner -->
+    <div id="clusterBanner" class="banner">
+      <div class="banner-icon">⚠️</div>
+      <div class="banner-content">
+        <h4 id="bannerTitle">Brak aktywnego połączenia z klastrem Kubernetes</h4>
+        <p id="bannerMessage">
+          Aplikacja działa w trybie standalone lub nie może nawiązać połączenia z Kubernetes API. 
+          Gdy KubeAlert połączy się z klastrem, status kontenerów wyświetli się tutaj automatycznie.
+        </p>
+      </div>
+    </div>
+
+    <!-- KPI Summary Grid -->
+    <div class="stats-grid">
+      <div class="stat-card total">
+        <div class="stat-header">
+          <span>Wszystkie Kontenery</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        </div>
+        <div id="statTotal" class="stat-value">0</div>
+      </div>
+
+      <div class="stat-card running">
+        <div class="stat-header">
+          <span>Działające (Running)</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        </div>
+        <div id="statRunning" class="stat-value">0</div>
+      </div>
+
+      <div class="stat-card waiting">
+        <div class="stat-header">
+          <span>Oczekujące (Waiting)</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        </div>
+        <div id="statWaiting" class="stat-value">0</div>
+      </div>
+
+      <div id="unhealthyCard" class="stat-card unhealthy">
+        <div class="stat-header">
+          <span>Błędy / Awarie</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        </div>
+        <div id="statUnhealthy" class="stat-value">0</div>
+      </div>
+
+      <div class="stat-card pods">
+        <div class="stat-header">
+          <span>Pody w klastrze</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+        </div>
+        <div id="statPods" class="stat-value">0</div>
+      </div>
+    </div>
+
+    <!-- Filters & Search Toolbar -->
+    <div class="toolbar">
+      <div class="search-box">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" id="searchInput" class="search-input" placeholder="Szukaj po kontenerze, podzie, namespace, obrazie...">
+      </div>
+
+      <div class="filter-group">
+        <button class="filter-btn active" data-filter="all">Wszystkie</button>
+        <button class="filter-btn" data-filter="running">Running</button>
+        <button class="filter-btn" data-filter="waiting">Waiting</button>
+        <button class="filter-btn" data-filter="unhealthy">Błędy</button>
+
+        <select id="namespaceSelect" class="select-ns">
+          <option value="">Wszystkie namespaces</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Containers Table -->
+    <div class="table-container">
+      <table id="containersTable">
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Kontener</th>
+            <th>Pod & Namespace</th>
+            <th>Obraz (Image)</th>
+            <th>Gotowość</th>
+            <th>Restarty</th>
+            <th>Szczegóły / Błąd</th>
+            <th>Akcja</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <!-- Populated by JS -->
+        </tbody>
+      </table>
+
+      <!-- Empty State -->
+      <div id="emptyState" class="empty-state">
+        <div class="empty-icon">📦</div>
+        <h3 id="emptyTitle">Brak kontenerów do monitorowania</h3>
+        <p id="emptyDesc">
+          Aplikacja nie zarejestrowała jeszcze żadnych kontenerów. Jeśli KubeAlert działa w klastrze, poczekaj na zsynchronizowanie danych z API Kubernetes.
+        </p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal Details -->
+  <div id="detailModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-title">
+        <span id="modalContainerName">Szczegóły kontenera</span>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <footer>
+    KubeAlert &bull; Monitoring Podów & Kontenerów Kubernetes &bull; Wersja API: <span id="appVersion">1.0.0</span>
+  </footer>
+
+  <script>
+    let currentData = { cluster: {}, summary: {}, containers: [] };
+    let activeFilter = 'all';
+    let searchQuery = '';
+    let selectedNamespace = '';
+    let autoRefreshActive = true;
+    let refreshTimer = null;
+
+    async function fetchData() {
+      const refreshIcon = document.getElementById('refreshIcon');
+      if (refreshIcon) refreshIcon.style.animation = 'spin 0.7s linear';
+
+      try {
+        const resp = await fetch('/api', { cache: 'no-store' });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        currentData = data;
+        render();
+      } catch (err) {
+        console.error('Błąd pobierania /api:', err);
+        updateClusterPill(false, null, 'Błąd połączenia z /api');
+      } finally {
+        if (refreshIcon) refreshIcon.style.animation = '';
+      }
+    }
+
+    function updateClusterPill(connected, version, customMsg) {
+      const pill = document.getElementById('clusterPill');
+      const text = document.getElementById('clusterStatusText');
+      const banner = document.getElementById('clusterBanner');
+      const bannerMsg = document.getElementById('bannerMessage');
+
+      if (connected) {
+        pill.className = 'cluster-status-pill connected';
+        text.textContent = `Połączono z klastrem (${version || 'k8s'})`;
+        banner.className = 'banner'; // hidden
+      } else {
+        pill.className = 'cluster-status-pill disconnected';
+        text.textContent = 'Rozłączono z klastrem';
+        banner.className = 'banner visible';
+        if (customMsg) bannerMsg.textContent = customMsg;
+      }
+    }
+
+    function render() {
+      const cluster = currentData.cluster || {};
+      const summary = currentData.summary || {};
+      const containers = currentData.containers || [];
+
+      // 1. Cluster state
+      updateClusterPill(cluster.connected, cluster.version, cluster.message);
+
+      // 2. Summary KPI
+      document.getElementById('statTotal').textContent = summary.total_containers ?? containers.length;
+      document.getElementById('statRunning').textContent = summary.running ?? 0;
+      document.getElementById('statWaiting').textContent = summary.waiting ?? 0;
+      document.getElementById('statUnhealthy').textContent = summary.unhealthy ?? 0;
+      document.getElementById('statPods').textContent = summary.total_pods ?? 0;
+
+      const unhealthyCard = document.getElementById('unhealthyCard');
+      if ((summary.unhealthy || 0) > 0) {
+        unhealthyCard.classList.add('has-errors');
+      } else {
+        unhealthyCard.classList.remove('has-errors');
+      }
+
+      // 3. Update namespace dropdown if new namespaces appeared
+      const namespaces = Array.from(new Set(containers.map(c => c.namespace).filter(Boolean))).sort();
+      const nsSelect = document.getElementById('namespaceSelect');
+      const currentSelected = nsSelect.value;
+      nsSelect.innerHTML = '<option value="">Wszystkie namespaces</option>';
+      namespaces.forEach(ns => {
+        const opt = document.createElement('option');
+        opt.value = ns;
+        opt.textContent = ns;
+        if (ns === currentSelected) opt.selected = true;
+        nsSelect.appendChild(opt);
+      });
+
+      // 4. Filter containers
+      const q = searchQuery.toLowerCase().trim();
+      const filtered = containers.filter(c => {
+        // Namespace filter
+        if (selectedNamespace && c.namespace !== selectedNamespace) return false;
+
+        // Status tab filter
+        if (activeFilter === 'running' && c.state !== 'running') return false;
+        if (activeFilter === 'waiting' && c.state !== 'waiting') return false;
+        if (activeFilter === 'unhealthy' && !c.unhealthy) return false;
+
+        // Search text
+        if (q) {
+          const matchName = (c.container_name || '').toLowerCase().includes(q);
+          const matchPod = (c.pod_name || '').toLowerCase().includes(q);
+          const matchNs = (c.namespace || '').toLowerCase().includes(q);
+          const matchImg = (c.image || '').toLowerCase().includes(q);
+          const matchReason = (c.reason || '').toLowerCase().includes(q);
+          if (!matchName && !matchPod && !matchNs && !matchImg && !matchReason) return false;
+        }
+
+        return true;
+      });
+
+      // 5. Render Table or Empty State
+      const tbody = document.getElementById('tableBody');
+      const emptyState = document.getElementById('emptyState');
+      const emptyTitle = document.getElementById('emptyTitle');
+      const emptyDesc = document.getElementById('emptyDesc');
+      const table = document.getElementById('containersTable');
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        table.style.display = 'none';
+        emptyState.style.display = 'block';
+
+        if (containers.length === 0) {
+          if (!cluster.connected) {
+            emptyTitle.textContent = 'Brak połączenia z klastrem Kubernetes';
+            emptyDesc.textContent = cluster.message || 'Aplikacja działa w trybie standalone. Połącz aplikację z klastrem Kubernetes, aby zobaczyć kontenery.';
+          } else {
+            emptyTitle.textContent = 'Brak kontenerów do monitorowania';
+            emptyDesc.textContent = 'W monitorowanych przestrzeniach nazw nie znaleziono żadnych kontenerów.';
+          }
+        } else {
+          emptyTitle.textContent = 'Brak wyników filtrowania';
+          emptyDesc.textContent = 'Żaden kontener nie pasuje do wpisanego zapytania lub wybranego filtra.';
+        }
+      } else {
+        table.style.display = 'table';
+        emptyState.style.display = 'none';
+
+        tbody.innerHTML = filtered.map((c, idx) => {
+          // Status badge
+          let badgeClass = 'badge-waiting';
+          let displayReason = c.reason || c.state;
+
+          if (c.state === 'running') {
+            badgeClass = 'badge-running';
+            displayReason = 'Running';
+          } else if (c.unhealthy) {
+            badgeClass = 'badge-danger';
+          } else if (c.state === 'terminated') {
+            badgeClass = 'badge-terminated';
+          }
+
+          // Ready icon
+          const readyHtml = c.ready 
+            ? '<span style="color: var(--color-success); font-weight: 600;">✓ Ready</span>' 
+            : '<span style="color: var(--text-muted);">✗ Not Ready</span>';
+
+          // Restarts
+          let restartClass = 'restart-badge zero';
+          if (c.restart_count > 5) restartClass = 'restart-badge high-restarts';
+          else if (c.restart_count > 0) restartClass = 'restart-badge has-restarts';
+
+          // Details message
+          let detailsText = c.reason || '';
+          if (c.exit_code !== null && c.exit_code !== undefined) {
+            detailsText += ` (kod: ${c.exit_code})`;
+          }
+          if (c.message) {
+            const shortMsg = c.message.length > 50 ? c.message.substring(0, 47) + '...' : c.message;
+            detailsText += ` - ${shortMsg}`;
+          }
+
+          return `
+            <tr>
+              <td>
+                <span class="badge ${badgeClass}">${displayReason}</span>
+              </td>
+              <td>
+                <strong>${escapeHtml(c.container_name)}</strong>
+                ${c.is_init ? '<span style="font-size: 0.7rem; color: #a5b4fc; margin-left: 4px;">[init]</span>' : ''}
+              </td>
+              <td>
+                <div class="code-text">${escapeHtml(c.pod_name)}</div>
+                <span class="ns-tag">${escapeHtml(c.namespace)}</span>
+              </td>
+              <td>
+                <div class="img-subtext" title="${escapeHtml(c.image || '')}">${escapeHtml(c.image || 'n/a')}</div>
+              </td>
+              <td>${readyHtml}</td>
+              <td><span class="${restartClass}">${c.restart_count}</span></td>
+              <td style="max-width: 250px;">
+                <div style="font-size: 0.8rem; color: ${c.unhealthy ? '#fca5a5' : 'var(--text-secondary)'}; word-break: break-word;">
+                  ${escapeHtml(detailsText || '-')}
+                </div>
+              </td>
+              <td>
+                <button class="btn" style="padding: 4px 8px; font-size: 0.75rem;" onclick="showDetails(${idx})">
+                  Więcej
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function showDetails(filteredIndex) {
+      // Find container in filtered view
+      const q = searchQuery.toLowerCase().trim();
+      const filtered = currentData.containers.filter(c => {
+        if (selectedNamespace && c.namespace !== selectedNamespace) return false;
+        if (activeFilter === 'running' && c.state !== 'running') return false;
+        if (activeFilter === 'waiting' && c.state !== 'waiting') return false;
+        if (activeFilter === 'unhealthy' && !c.unhealthy) return false;
+        if (q) {
+          const matchName = (c.container_name || '').toLowerCase().includes(q);
+          const matchPod = (c.pod_name || '').toLowerCase().includes(q);
+          const matchNs = (c.namespace || '').toLowerCase().includes(q);
+          const matchImg = (c.image || '').toLowerCase().includes(q);
+          const matchReason = (c.reason || '').toLowerCase().includes(q);
+          if (!matchName && !matchPod && !matchNs && !matchImg && !matchReason) return false;
+        }
+        return true;
+      });
+
+      const c = filtered[filteredIndex];
+      if (!c) return;
+
+      document.getElementById('modalContainerName').textContent = `${c.container_name} (${c.pod_name})`;
+      
+      let html = `
+        <div class="details-row"><span class="details-label">Namespace</span><span class="details-val">${escapeHtml(c.namespace)}</span></div>
+        <div class="details-row"><span class="details-label">Pod Name</span><span class="details-val">${escapeHtml(c.pod_name)}</span></div>
+        <div class="details-row"><span class="details-label">Container</span><span class="details-val">${escapeHtml(c.container_name)} ${c.is_init ? '(init container)' : ''}</span></div>
+        <div class="details-row"><span class="details-label">Image</span><span class="details-val code-text">${escapeHtml(c.image || 'n/a')}</span></div>
+        <div class="details-row"><span class="details-label">State / Reason</span><span class="details-val"><strong>${escapeHtml(c.state)}</strong> - ${escapeHtml(c.reason || 'n/a')}</span></div>
+        <div class="details-row"><span class="details-label">Ready</span><span class="details-val">${c.ready ? 'Tak' : 'Nie'}</span></div>
+        <div class="details-row"><span class="details-label">Restart Count</span><span class="details-val">${c.restart_count}</span></div>
+        <div class="details-row"><span class="details-label">Pod Phase</span><span class="details-val">${escapeHtml(c.pod_phase)}</span></div>
+        <div class="details-row"><span class="details-label">Node / Pod IP</span><span class="details-val">${escapeHtml(c.node_name || 'n/a')} (${escapeHtml(c.pod_ip || 'n/a')})</span></div>
+      `;
+
+      if (c.exit_code !== null && c.exit_code !== undefined) {
+        html += `<div class="details-row"><span class="details-label">Exit Code</span><span class="details-val">${c.exit_code}</span></div>`;
+      }
+      if (c.started_at) {
+        html += `<div class="details-row"><span class="details-label">Started At</span><span class="details-val">${escapeHtml(c.started_at)}</span></div>`;
+      }
+      if (c.message) {
+        html += `
+          <div class="details-row">
+            <span class="details-label">Komunikat błędu / stanu:</span>
+            <div class="error-box">${escapeHtml(c.message)}</div>
+          </div>
+        `;
+      }
+
+      document.getElementById('modalBody').innerHTML = html;
+      document.getElementById('detailModal').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('detailModal').classList.remove('open');
+    }
+
+    window.onclick = function(e) {
+      if (e.target === document.getElementById('detailModal')) {
+        closeModal();
+      }
+    };
+
+    // Event listeners
+    document.getElementById('refreshBtn').addEventListener('click', fetchData);
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      render();
+    });
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeFilter = btn.dataset.filter;
+        render();
+      });
+    });
+
+    document.getElementById('namespaceSelect').addEventListener('change', (e) => {
+      selectedNamespace = e.target.value;
+      render();
+    });
+
+    const autoBtn = document.getElementById('autoToggleBtn');
+    autoBtn.addEventListener('click', () => {
+      autoRefreshActive = !autoRefreshActive;
+      if (autoRefreshActive) {
+        autoBtn.textContent = 'Auto: 5s';
+        autoBtn.style.color = 'var(--text-primary)';
+        startAutoRefresh();
+      } else {
+        autoBtn.textContent = 'Auto: OFF';
+        autoBtn.style.color = 'var(--text-muted)';
+        clearInterval(refreshTimer);
+      }
+    });
+
+    function startAutoRefresh() {
+      clearInterval(refreshTimer);
+      refreshTimer = setInterval(() => {
+        if (autoRefreshActive) fetchData();
+      }, 5000);
+    }
+
+    // Keyframes for refresh button
+    const style = document.createElement('style');
+    style.innerHTML = '@keyframes spin { 100% { transform: rotate(360deg); } }';
+    document.head.appendChild(style);
+
+    // Initial load
+    fetchData();
+    startAutoRefresh();
+  </script>
+</body>
+</html>
